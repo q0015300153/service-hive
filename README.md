@@ -1,6 +1,8 @@
 service-hive
 ==========
 
+###### tags: `hive` `hadoop` `docker-compose` `docker` `mariadb`
+
 上方為中文說明  
 Chinese description above  
 
