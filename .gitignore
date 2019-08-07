@@ -1,0 +1,3 @@
+*.tar.gz
+*.jar
+hive/mysql-connector-java-*
