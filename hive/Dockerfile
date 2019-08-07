@@ -8,8 +8,8 @@ ENV HIVE_AUX_JARS_PATH $HIVE_HOME/lib/*
 
 # 複製 hive
 WORKDIR /opt
-ADD              ./apache-hive-bin.tar.gz /opt
-RUN mv           ./apache-hive-bin        /opt/hive
+ADD              ./apache-hive-bin.tar.gz  /opt
+RUN mv           ./apache-hive-*-bin      ./hive
 RUN chmod -R 755  /opt/hive
 RUN rm    -f      /opt/hive/lib/log4j-slf4j-impl-2.10.0.jar
 

@@ -19,6 +19,7 @@ RUN gpg  --import KEYS
 # 複製 hadoop
 WORKDIR /opt
 ADD    ./hadoop.tar.gz /opt
+RUN    mv ./hadoop-*  ./hadoop
 
 RUN ln -s /opt/hadoop/etc/hadoop /etc/hadoop
 RUN mkdir /opt/hadoop/logs
