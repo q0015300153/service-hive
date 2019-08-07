@@ -1,0 +1,145 @@
+version: "3.7"
+
+services:
+    # tw: 建立基礎 hadoop
+    # en: Building the foundation hadoop
+    hadoop:
+        container_name: hadoop
+        build:
+            context: ./hadoop
+            dockerfile: Dockerfile
+        image: hadoop3.2.0:1.0.0
+    # tw: 建立基礎 hive
+    # en: Building the foundation hive
+    hive:
+        container_name: hive
+        build:
+            context: ./hive
+            dockerfile: Dockerfile
+        image: hive3.1.1:1.0.0
+        depends_on:
+            - hadoop
+
+    # tw: 建立 hadoop namenode
+    # en: Create hadoop namenode
+    namenode:
+        container_name: namenode
+        build:
+            context: ./hadoop-namenode
+            dockerfile: Dockerfile
+        volumes:
+            - namenode:/hadoop/dfs/name
+        environment:
+            - CLUSTER_NAME=test
+        env_file:
+            - ./hadoop-hive.env
+        ports:
+            - 9870:9870
+        depends_on:
+            - hadoop
+        networks:
+            - default-network
+    # tw: 建立 hadoop datanode
+    # en: Create hadoop datanode
+    datanode:
+        container_name: datanode
+        build:
+            context: ./hadoop-datanode
+            dockerfile: Dockerfile
+        volumes:
+            - datanode:/hadoop/dfs/data
+        env_file:
+            - ./hadoop-hive.env
+        environment:
+            - SERVICE_PRECONDITION=namenode:9870
+        ports:
+            - 9864:9864
+        depends_on:
+            - hadoop
+        networks:
+            - default-network
+
+    # tw: 建立 hive server
+    # en: Create hive server
+    hive-server:
+        container_name: hive-server
+        image: hive3.1.1:1.0.0
+        env_file:
+            - ./hadoop-hive.env
+        environment:
+            - HIVE_CORE_CONF_javax_jdo_option_ConnectionURL=jdbc:mysql://hive-metastore/metastore
+            - SERVICE_PRECONDITION=hive-metastore:9083
+        ports:
+            - 10000:10000
+            - 10002:10002
+        depends_on:
+            - hive
+            - hive-metastore
+        networks:
+            - default-network
+    # tw: 建立 hive metastore
+    # en: Create hive metastore
+    hive-metastore:
+        container_name: hive-metastore
+        image: hive3.1.1:1.0.0
+        env_file:
+            - ./hadoop-hive.env
+        command:
+            - /opt/hive/bin/hive --service metastore
+        environment:
+            - SERVICE_PRECONDITION=namenode:9870 datanode:9864 hive-metastore-mariadb:3306
+        ports:
+            - 9083:9083
+        depends_on:
+            - hive
+            - hive-metastore-mariadb
+        networks:
+            - default-network
+    # tw: 建立 hive 用 mariadb
+    # en: Create hive with mariadb
+    hive-metastore-mariadb:
+        container_name: hive-mariadb
+        build:
+            context: ./mariadb
+            dockerfile: Dockerfile
+        restart: on-failure
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=metastore
+            - MYSQL_USER=hive
+            - MYSQL_PASSWORD=hive
+        volumes:
+            - hive-mariadb:/var/lib/mysql
+            - ./hive/init-sql:/docker-entrypoint-initdb.d
+        networks:
+            - default-network
+
+volumes:
+    # tw: hadoop 的 namenode 存放路徑
+    # en: Hadoop's namenode storage path
+    namenode:
+        driver: local
+        driver_opts:
+            type: none
+            device: $PWD/${NAME_NODE:?err}
+            o: bind
+    # tw: hadoop 的 datanode 存放路徑
+    # en: Hadoop's datanode storage path
+    datanode:
+        driver: local
+        driver_opts:
+            type: none
+            device: $PWD/${DATA_NODE:?err}
+            o: bind
+    # tw: hive 的 mariadb 資料庫存放路徑
+    # en: Hive's mariadb data repository path
+    hive-mariadb:
+        driver: local
+        driver_opts:
+            type: none
+            device: $PWD/${HIVE_DATA:?err}
+            o: bind
+
+networks:
+    default-network:
+        name: ${APP_NAME:?err}-network
